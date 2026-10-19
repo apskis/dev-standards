@@ -300,6 +300,36 @@ These rules are specific to React and Next.js projects. Also reference CURSOR_RU
 
 ---
 
+## Bulletproof Components
+
+A component should keep working when someone else uses it in a setting you
+did not plan for. Source: Shu Ding, "Building Bulletproof React Components"
+(https://shud.in/thoughts/build-bulletproof-react-components).
+
+109. Server safe: never touch browser only APIs (window, document, localStorage, matchMedia) during render or in a useState initializer. Read them in useEffect, or behind a `typeof window !== 'undefined'` check, so server rendering doesn't crash.
+
+110. Hydration safe: if the first paint must already show a client only value (a saved theme, say), set it before React hydrates with a small inline script wrapped in try/catch, rather than flashing the server value and switching in an effect. Server and client must render the same markup.
+
+111. Instance safe: never hardcode a DOM id inside a reusable component. Use `useId()` so two copies on one page don't collide (also for label/input and aria pairs).
+
+112. Deduplicate server reads: in Server Components, wrap a data read that several components call with `React.cache` so one request hits the database once.
+
+113. Composition safe: pass data to children through context, not `React.cloneElement` or `React.Children.map`. Children may be lazy, async or opaque (Server Components, `React.lazy`, "use cache"), and cloning breaks on them.
+
+114. Portal and window safe: attach global listeners to the window the component actually lives in: `ref.current?.ownerDocument.defaultView ?? window`. It may render in an iframe, a pop out window or a portal.
+
+115. Transition ready: make state changes that should animate (view switches, tab changes) inside `startTransition`, so `<ViewTransition>` can animate them.
+
+116. Activity safe: anything with a DOM side effect outside the component (a `<style>` that sets `:root` variables, a global class) must be undone when the component is hidden by `<Activity>`, not only when it unmounts. Switch it off in a useLayoutEffect cleanup (for `<style>`, set `media="not all"`) and back on when shown.
+
+117. Leak proof: never pass secrets (tokens, keys) inside objects to components you don't own; they may reach a Client Component and be sent to the browser. Pass only the fields needed, and where available mark server only values with `experimental_taintUniqueValue` or `experimental_taintObjectReference`.
+
+118. Don't rely on useMemo for correctness: it is a performance hint, and React may drop the cache (hot reload, offscreen work, future features). If a value must stay the same (a random or generated value, an id), keep it in state: a useState initializer, updated during render when its input changes.
+
+119. Be defensive, not paranoid: apply these where a component is reusable or shared. A one off screen component needs only the ones that fit.
+
+---
+
 ## Quick Reference - React/Next.js
 
 ### Next.js Patterns
@@ -372,6 +402,16 @@ These rules are specific to React and Next.js projects. Also reference CURSOR_RU
 - Don't use index as key
 - Don't create components inside components
 - Don't over-optimize
+
+### Bulletproof Components
+- No browser APIs in render: read them in useEffect
+- Same markup on server and client; inline script for first paint values
+- useId, never hardcoded ids
+- Context over cloneElement
+- Listeners on ownerDocument.defaultView
+- Undo DOM side effects when hidden by Activity
+- Never pass secrets in props you don't control
+- State, not useMemo, when a value must persist
 
 ---
 
